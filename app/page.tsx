@@ -4,6 +4,7 @@ import { AddMeasurementForm } from "@/components/AddMeasurementForm";
 import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { MeasurementsTable } from "@/components/MeasurementsTable";
 import { ExportButtons } from "@/components/ExportButtons";
+import { PressureChartDialog } from "@/components/PressureChartDialog";
 import { LogoutButton } from "@/components/LogoutButton";
 import type { Measurement } from "@/lib/types";
 
@@ -48,10 +49,12 @@ export default async function Home() {
               {user.email}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <ExportButtons measurements={measurements} userEmail={user.email ?? ""} />
-            <LogoutButton />
-          </div>
+          <LogoutButton />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <PressureChartDialog measurements={measurements} />
+          <ExportButtons measurements={measurements} userEmail={user.email ?? ""} />
         </div>
 
         <AddMeasurementForm />

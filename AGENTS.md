@@ -54,6 +54,9 @@ components/
   MeasurementsTable.tsx         Tabella (client, per lo stato di ordinamento), delega
                                  il rendering di ogni riga a MeasurementRow.
   MeasurementRow.tsx            Riga tabella con toggle vista/modifica inline + elimina.
+  PressureChartDialog.tsx       CTA "Andamento" + popup (<dialog> nativo) con grafico SVG
+                                 scritto a mano (vedi sezione Grafico sotto). Nessuna
+                                 libreria di charting.
   LogoutButton.tsx
 lib/
   types.ts                      Tipo Measurement condiviso.
@@ -108,7 +111,7 @@ Eccezione: `deleteMeasurement`/`signOut` sono semplici `(formData) => Promise<vo
 Bug già corretto una volta in questo progetto, facile da reintrodurre: **Vercel esegue il server in UTC**, il browser dell'utente in `Europe/Rome`. Qualsiasi valore derivato da `new Date()` (non da un timestamp già salvato) calcolato durante il render lato server produce un orario sbagliato e/o un hydration mismatch.
 
 Regole:
-- Per mostrare un `measured_at` già salvato: usa `Intl.DateTimeFormat("it-IT", { ..., timeZone: "Europe/Rome" })` — **sempre con `timeZone` esplicito**, altrimenti il rendering server (UTC) e client (locale) divergono.
+- Per mostrare un `measured_at` già salvato: usa `Intl.DateTimeFormat("it-IT", { ..., timeZone: "Europe/Rome" })` — **sempre con `timeZone` esplicito**, altrimenti il rendering server (UTC) e client (locale) divergono. Esempi già presenti: `MeasurementRow.tsx`, `ExportButtons.tsx`, `PressureChartDialog.tsx`.
 - Per un default basato sull'orologio corrente (es. "adesso" in un form): non calcolarlo durante il render. Vedi `AddMeasurementForm.tsx` — si calcola in un `useEffect` al mount (quindi solo lato client) e si usa `key` per far rimontare l'`<input>` non controllato una volta pronto il valore.
 - `lib/date.ts` contiene `toLocalDateInput`/`toLocalTimeInput`: usano i getter locali di `Date` (`getFullYear`, `getHours`, ...), quindi sono corretti **solo se eseguiti lato client** (mai durante SSR).
 
@@ -124,6 +127,16 @@ Regole:
 - Le righe non valide vengono scartate singolarmente con motivo (`{ line, reason }`), l'import prosegue con le righe valide — **mai bloccare tutto l'import per una riga sporca**
 
 `measurementsToCsv` esporta con le stesse colonne/ordine per permettere un roundtrip export→import.
+
+## Grafico andamento (`PressureChartDialog.tsx`)
+
+SVG scritto a mano, non una libreria di charting. Confrontate le alternative prima di scegliere: Recharts ~148KB gzip, uPlot ~22KB gzip, SVG a mano 0KB — per poche centinaia di punti su un'app personale l'SVG a mano vince nettamente. **Non introdurre Recharts/Chart.js/uPlot/ecc. senza che sia l'utente a chiederlo esplicitamente**, il confronto è già stato fatto.
+
+Decisioni di design da conoscere prima di modificarlo:
+- Asse X a **spaziatura fissa per punto** (`PIXELS_PER_POINT`), non proporzionale al timestamp reale. È una scelta deliberata (non un bug): con dati reali che hanno più letture lo stesso giorno e mesi di buchi fra una serie e l'altra, uno scaling proporzionale al tempo produceva o etichette sovrapposte o un grafico larghissimo da scrollare. Con pochi punti i dati si distribuiscono su tutta la larghezza minima (`MIN_CHART_WIDTH`), senza scroll; oltre una certa densità il grafico supera il contenitore e scrolla in orizzontale (`overflow-x-auto`) — vedi il commento su `PIXELS_PER_POINT` nel file.
+- Le due linee tratteggiate fisse (120/80, costanti `REFERENCE_SYSTOLIC`/`REFERENCE_DIASTOLIC`) sono sempre incluse nel calcolo del range Y (`values.push(...)`), così restano visibili anche se tutte le misurazioni sono sopra o sotto quei valori.
+- Le etichette dell'asse X (data + ora, due `<tspan>`) usano gli stessi formatter con `timeZone: "Europe/Rome"` esplicito descritti sopra — vale la stessa regola sul fuso orario.
+- Nessun tooltip/hover: scelta esplicita dell'utente ("in futuro vedremo"), non un'omissione.
 
 ## Convenzioni di codice
 
