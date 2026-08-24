@@ -198,3 +198,83 @@ export async function importMeasurements(
   revalidatePath("/");
   return { imported: rows.length, errors, successId: prevState.successId + 1 };
 }
+
+export async function updateMeasurement(
+  prevState: MeasurementState,
+  formData: FormData,
+): Promise<MeasurementState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const id = String(formData.get("id") ?? "");
+  const date = String(formData.get("date") ?? "");
+  const time = String(formData.get("time") ?? "");
+  const systolic = Number(formData.get("systolic"));
+  const diastolic = Number(formData.get("diastolic"));
+  const pulse = Number(formData.get("pulse"));
+  const notes = String(formData.get("notes") ?? "").trim();
+
+  if (
+    !id ||
+    !date ||
+    !time ||
+    !Number.isFinite(systolic) ||
+    !Number.isFinite(diastolic) ||
+    !Number.isFinite(pulse)
+  ) {
+    return {
+      error: "Compila tutti i campi obbligatori con valori validi.",
+      successId: prevState.successId,
+    };
+  }
+
+  const measuredAt = new Date(`${date}T${time}`);
+  if (Number.isNaN(measuredAt.getTime())) {
+    return { error: "Data od ora non valide.", successId: prevState.successId };
+  }
+
+  const { error } = await supabase
+    .from("measurements")
+    .update({
+      measured_at: measuredAt.toISOString(),
+      systolic,
+      diastolic,
+      pulse,
+      notes: notes || null,
+    })
+    .eq("id", id);
+
+  if (error) {
+    return {
+      error: "Errore durante il salvataggio. Riprova.",
+      successId: prevState.successId,
+    };
+  }
+
+  revalidatePath("/");
+  return { error: null, successId: prevState.successId + 1 };
+}
+
+export async function deleteMeasurement(formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const id = String(formData.get("id") ?? "");
+  if (id) {
+    await supabase.from("measurements").delete().eq("id", id);
+  }
+
+  revalidatePath("/");
+}

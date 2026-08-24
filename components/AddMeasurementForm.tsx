@@ -1,17 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { addMeasurement, type MeasurementState } from "@/app/actions";
+import { toLocalDateInput, toLocalTimeInput } from "@/lib/date";
 
 const initialState: MeasurementState = { error: null, successId: 0 };
-
-function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function now(): string {
-  return new Date().toISOString().slice(11, 16);
-}
 
 export function AddMeasurementForm() {
   const [state, formAction, pending] = useActionState(
@@ -19,6 +12,17 @@ export function AddMeasurementForm() {
     initialState,
   );
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Calcolati solo lato client: sul server (UTC) risulterebbero sfasati
+  // rispetto al fuso orario locale del browser.
+  const [now, setNow] = useState<Date | null>(null);
+
+  useEffect(() => {
+    // Lettura una tantum dell'orologio di sistema del browser al mount:
+    // un caso legittimo di effetto (non uno stato derivabile a render-time).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNow(new Date());
+  }, []);
 
   useEffect(() => {
     if (state.successId > 0) {
@@ -34,22 +38,24 @@ export function AddMeasurementForm() {
     >
       <Field label="Data" htmlFor="date">
         <input
+          key={now ? "ready" : "pending"}
           id="date"
           name="date"
           type="date"
           required
-          defaultValue={today()}
+          defaultValue={now ? toLocalDateInput(now) : undefined}
           className="input"
         />
       </Field>
 
       <Field label="Ora" htmlFor="time">
         <input
+          key={now ? "ready" : "pending"}
           id="time"
           name="time"
           type="time"
           required
-          defaultValue={now()}
+          defaultValue={now ? toLocalTimeInput(now) : undefined}
           className="input"
         />
       </Field>

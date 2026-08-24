@@ -9,11 +9,13 @@ const dateFormatter = new Intl.DateTimeFormat("it-IT", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
+  timeZone: "Europe/Rome",
 });
 
 const timeFormatter = new Intl.DateTimeFormat("it-IT", {
   hour: "2-digit",
   minute: "2-digit",
+  timeZone: "Europe/Rome",
 });
 
 function downloadBlob(content: string, filename: string, type: string): void {
