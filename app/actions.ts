@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { parseMeasurementsCsv, type ImportError } from "@/lib/csv";
 
 export type AuthState = {
   error: string | null;
@@ -138,4 +139,62 @@ export async function addMeasurement(
 
   revalidatePath("/");
   return { error: null, successId: prevState.successId + 1 };
+}
+
+export type ImportState = {
+  imported: number;
+  errors: ImportError[];
+  successId: number;
+};
+
+export async function importMeasurements(
+  prevState: ImportState,
+  formData: FormData,
+): Promise<ImportState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    return {
+      imported: 0,
+      errors: [{ line: 0, reason: "Nessun file selezionato." }],
+      successId: prevState.successId,
+    };
+  }
+
+  const text = await file.text();
+  const { rows, errors } = parseMeasurementsCsv(text);
+
+  if (rows.length === 0) {
+    return { imported: 0, errors, successId: prevState.successId };
+  }
+
+  const { error } = await supabase.from("measurements").insert(
+    rows.map((row) => ({
+      user_id: user.id,
+      measured_at: row.measuredAt,
+      systolic: row.systolic,
+      diastolic: row.diastolic,
+      pulse: row.pulse,
+      notes: row.notes,
+    })),
+  );
+
+  if (error) {
+    return {
+      imported: 0,
+      errors: [{ line: 0, reason: "Errore durante il salvataggio. Riprova." }],
+      successId: prevState.successId,
+    };
+  }
+
+  revalidatePath("/");
+  return { imported: rows.length, errors, successId: prevState.successId + 1 };
 }

@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AddMeasurementForm } from "@/components/AddMeasurementForm";
+import { ImportCsvForm } from "@/components/ImportCsvForm";
 import { MeasurementsTable } from "@/components/MeasurementsTable";
+import { ExportButtons } from "@/components/ExportButtons";
 import { LogoutButton } from "@/components/LogoutButton";
 import type { Measurement } from "@/lib/types";
 
@@ -46,10 +48,15 @@ export default async function Home() {
               {user.email}
             </p>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <ExportButtons measurements={measurements} userEmail={user.email ?? ""} />
+            <LogoutButton />
+          </div>
         </div>
 
         <AddMeasurementForm />
+
+        <ImportCsvForm />
 
         <MeasurementsTable measurements={measurements} />
       </div>
