@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { parseMeasurementsCsv, type ImportError } from "@/lib/csv";
+import { parseLocalDateTime } from "@/lib/date";
 
 export type AuthState = {
   error: string | null;
@@ -116,8 +117,8 @@ export async function addMeasurement(
     };
   }
 
-  const measuredAt = new Date(`${date}T${time}`);
-  if (Number.isNaN(measuredAt.getTime())) {
+  const measuredAt = parseLocalDateTime(date, time);
+  if (!measuredAt) {
     return { error: "Data od ora non valide.", successId: prevState.successId };
   }
 
@@ -234,8 +235,8 @@ export async function updateMeasurement(
     };
   }
 
-  const measuredAt = new Date(`${date}T${time}`);
-  if (Number.isNaN(measuredAt.getTime())) {
+  const measuredAt = parseLocalDateTime(date, time);
+  if (!measuredAt) {
     return { error: "Data od ora non valide.", successId: prevState.successId };
   }
 

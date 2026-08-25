@@ -1,4 +1,5 @@
 import type { Measurement } from "@/lib/types";
+import { zonedDateTimeToUtc } from "@/lib/date";
 
 export function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
@@ -180,17 +181,13 @@ export function parseMeasurementsCsv(text: string): {
       continue;
     }
 
-    const measuredAt = new Date(
+    const measuredAt = zonedDateTimeToUtc(
       date.year,
-      date.month - 1,
+      date.month,
       date.day,
       time.hour,
       time.minute,
     );
-    if (Number.isNaN(measuredAt.getTime())) {
-      errors.push({ line, reason: "data od ora non valide" });
-      continue;
-    }
 
     const notes = (rawNotes ?? "").trim();
 
